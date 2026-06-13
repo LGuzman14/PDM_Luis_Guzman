@@ -31,11 +31,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.labo04luisguzman00003924.Model.Task
 import com.example.labo04luisguzman00003924.ViewModel.GeneralViewModel
 import com.example.labo04luisguzman00003924.component.TaskCard
-import java.util.Date
 
 @Composable
 fun TODOScreen(
@@ -44,9 +44,18 @@ fun TODOScreen(
 ) {
     val tasks by viewModel.tasks.collectAsState()
 
-    var showDialog by remember { mutableStateOf(false) }
+    var showTaskDialog by remember { mutableStateOf(false) }
     var taskTitle by remember { mutableStateOf("") }
     var taskDescription by remember { mutableStateOf("") }
+    var taskToEdit by remember { mutableStateOf<Task?>(null) }
+    var taskToDelete by remember { mutableStateOf<Task?>(null) }
+
+    fun clearForm() {
+        taskTitle = ""
+        taskDescription = ""
+        taskToEdit = null
+        showTaskDialog = false
+    }
 
     Column(
         modifier = Modifier
@@ -68,7 +77,7 @@ fun TODOScreen(
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "Organiza tus actividades del laboratorio",
+                text = "Agrega, modifica y elimina tareas guardadas con Room",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -105,7 +114,10 @@ fun TODOScreen(
 
                     Button(
                         onClick = {
-                            showDialog = true
+                            taskToEdit = null
+                            taskTitle = ""
+                            taskDescription = ""
+                            showTaskDialog = true
                         },
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -119,33 +131,76 @@ fun TODOScreen(
             color = MaterialTheme.colorScheme.outlineVariant
         )
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(
-                start = 20.dp,
-                end = 20.dp,
-                top = 16.dp,
-                bottom = 24.dp
-            )
-        ) {
-            items(
-                items = tasks,
-                key = { task -> task.id }
-            ) { task ->
-                TaskCard(task = task)
+        if (tasks.isEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "No hay tareas guardadas",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Presiona Añadir para guardar tu primera tarea en la base de datos local.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(
+                    start = 20.dp,
+                    end = 20.dp,
+                    top = 16.dp,
+                    bottom = 24.dp
+                )
+            ) {
+                items(
+                    items = tasks,
+                    key = { task -> task.id }
+                ) { task ->
+                    TaskCard(
+                        task = task,
+                        onEdit = { selectedTask ->
+                            taskToEdit = selectedTask
+                            taskTitle = selectedTask.title
+                            taskDescription = selectedTask.description
+                            showTaskDialog = true
+                        },
+                        onDelete = { selectedTask ->
+                            taskToDelete = selectedTask
+                        },
+                        onToggleStatus = { selectedTask ->
+                            viewModel.toggleTaskStatus(selectedTask)
+                        }
+                    )
+                }
             }
         }
     }
 
-    if (showDialog) {
+    if (showTaskDialog) {
+        val editingTask = taskToEdit
+
         AlertDialog(
             onDismissRequest = {
-                showDialog = false
+                clearForm()
             },
             title = {
                 Text(
-                    text = "Nueva tarea",
+                    text = if (editingTask == null) "Nueva tarea" else "Modificar tarea",
                     fontWeight = FontWeight.Bold
                 )
             },
@@ -174,31 +229,70 @@ fun TODOScreen(
                 Button(
                     onClick = {
                         if (taskTitle.isNotBlank()) {
-                            val nuevaTarea = Task(
-                                id = (tasks.maxOfOrNull { it.id } ?: 0) + 1,
-                                title = taskTitle,
-                                description = taskDescription,
-                                endDate = Date()
-                            )
+                            if (editingTask == null) {
+                                viewModel.addTask(
+                                    title = taskTitle,
+                                    description = taskDescription
+                                )
+                            } else {
+                                viewModel.updateTask(
+                                    task = editingTask,
+                                    title = taskTitle,
+                                    description = taskDescription
+                                )
+                            }
 
-                            viewModel.addTask(nuevaTarea)
-
-                            taskTitle = ""
-                            taskDescription = ""
-                            showDialog = false
+                            clearForm()
                         }
                     },
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Guardar")
+                    Text(text = if (editingTask == null) "Guardar" else "Actualizar")
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = {
-                        taskTitle = ""
-                        taskDescription = ""
-                        showDialog = false
+                        clearForm()
+                    }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    taskToDelete?.let { selectedTask ->
+        AlertDialog(
+            onDismissRequest = {
+                taskToDelete = null
+            },
+            title = {
+                Text(
+                    text = "Eliminar tarea",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "¿Deseas eliminar \"${selectedTask.title}\"? Esta acción quitará la tarea de Room."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteTask(selectedTask)
+                        taskToDelete = null
+                    },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        taskToDelete = null
                     }
                 ) {
                     Text("Cancelar")

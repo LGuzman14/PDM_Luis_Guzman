@@ -12,8 +12,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -28,6 +30,9 @@ import java.util.Locale
 @Composable
 fun TaskCard(
     task: Task,
+    onEdit: (Task) -> Unit,
+    onDelete: (Task) -> Unit,
+    onToggleStatus: (Task) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val dateFormatter = remember {
@@ -106,6 +111,36 @@ fun TaskCard(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.outline
             )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedButton(
+                    onClick = { onToggleStatus(task) },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(text = if (task.isCompleted) "Pendiente" else "Completar")
+                }
+
+                TextButton(
+                    onClick = { onEdit(task) }
+                ) {
+                    Text(text = "Modificar")
+                }
+
+                TextButton(
+                    onClick = { onDelete(task) }
+                ) {
+                    Text(
+                        text = "Eliminar",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
         }
     }
 }

@@ -1,68 +1,84 @@
 package com.example.labo04luisguzman00003924.ViewModel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import com.example.labo04luisguzman00003924.Model.Task
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import com.example.labo04luisguzman00003924.data.repository.TaskRepository
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.util.Date
 
-class GeneralViewModel: ViewModel() {
-    private val _tasks = MutableStateFlow<MutableList<Task>>(mutableListOf())
-    val tasks = _tasks.asStateFlow()
+class GeneralViewModel(
+    private val repository: TaskRepository
+) : ViewModel() {
 
-    init {
-        generateRandomTasks()
-    }
-
-    private fun generateRandomTasks() {
-        val randomTasks = mutableListOf<Task>()
-
-        val titles = listOf(
-            "Estudiar para el parcial",
-            "Entregar laboratorio de Android",
-            "Revisar apuntes de clase",
-            "Crear pantalla en Jetpack Compose",
-            "Corregir errores del proyecto",
-            "Subir tarea al aula virtual",
-            "Preparar exposición grupal",
-            "Leer guía de laboratorio",
-            "Practicar ejercicios de Kotlin",
-            "Diseñar interfaz de usuario",
-            "Actualizar repositorio en GitHub",
-            "Hacer pruebas de la aplicación",
-            "Organizar archivos del proyecto",
-            "Completar documentación técnica",
-            "Enviar avance al docente"
+    val tasks: StateFlow<List<Task>> = repository.getAllTasks()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
         )
 
-        val descriptions = listOf(
-            "Actividad relacionada con la universidad",
-            "Pendiente importante para completar esta semana",
-            "Revisar cuidadosamente antes de entregar",
-            "Tarea necesaria para avanzar en el proyecto",
-            "Completar y verificar que funcione correctamente",
-            "Realizar con tiempo para evitar errores",
-            "Trabajo asignado en la clase de programación",
-            "Requiere concentración y revisión final",
-            "Pendiente académico que debe ser entregado pronto",
-            "Actividad práctica para mejorar el proyecto"
-        )
+    fun addTask(title: String, description: String) {
+        val cleanTitle = title.trim()
+        val cleanDescription = description.trim()
 
-        for (i in 1..15) {
-            randomTasks.add(
+        if (cleanTitle.isBlank()) return
+
+        viewModelScope.launch {
+            repository.insertTask(
                 Task(
-                    id = i,
-                    title = titles.random(),
-                    description = descriptions.random(),
+                    title = cleanTitle,
+                    description = cleanDescription,
                     endDate = Date()
                 )
             )
         }
-
-        _tasks.value = randomTasks
     }
 
-    fun addTask(task: Task) {
-        _tasks.value = _tasks.value.toMutableList().apply { add(task) }
+    fun updateTask(task: Task, title: String, description: String) {
+        val cleanTitle = title.trim()
+        val cleanDescription = description.trim()
+
+        if (cleanTitle.isBlank()) return
+
+        viewModelScope.launch {
+            repository.updateTask(
+                task.copy(
+                    title = cleanTitle,
+                    description = cleanDescription
+                )
+            )
+        }
+    }
+
+    fun deleteTask(task: Task) {
+        viewModelScope.launch {
+            repository.deleteTask(task)
+        }
+    }
+
+    fun toggleTaskStatus(task: Task) {
+        viewModelScope.launch {
+            repository.updateTask(
+                task.copy(isCompleted = !task.isCompleted)
+            )
+        }
+    }
+
+    class Factory(
+        private val repository: TaskRepository
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            if (modelClass.isAssignableFrom(GeneralViewModel::class.java)) {
+                return GeneralViewModel(repository) as T
+            }
+
+            throw IllegalArgumentException("Unknown ViewModel class")
+        }
     }
 }

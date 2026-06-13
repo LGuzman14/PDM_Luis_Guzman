@@ -30,7 +30,7 @@ fun HomeScreen(onNavigateToList: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Lab 4",
+            text = "Lab 5",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.SemiBold
@@ -39,7 +39,7 @@ fun HomeScreen(onNavigateToList: () -> Unit) {
         Spacer(modifier = Modifier.height(10.dp))
 
         Text(
-            text = "Arquitectura MVVM",
+            text = "Persistencia con Room",
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
@@ -49,7 +49,7 @@ fun HomeScreen(onNavigateToList: () -> Unit) {
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Gestión simple de tareas usando ViewModel, StateFlow y Jetpack Compose.",
+            text = "Gestión de tareas usando Room, DAO, Repository, ViewModel, StateFlow y Jetpack Compose.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
